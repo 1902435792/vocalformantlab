@@ -1,15 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { FormantData } from '../types';
 
 interface Props {
     formants: FormantData;
     pitch: number;
+    onFormantChange?: (f1: number, f2: number) => void;
 }
 
 // Linear Interpolation
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
+// Inverse lerp: get t from value
+const invLerp = (a: number, b: number, v: number) => Math.max(0, Math.min(1, (v - a) / (b - a)));
+
+export const VocalTractViz: React.FC<Props> = ({ formants, pitch, onFormantChange }) => {
+    const svgRef = useRef<SVGSVGElement>(null);
+    const [dragging, setDragging] = useState<'jaw' | 'tongue' | null>(null);
+
     // --- 1. Control Parameters (Normalized) ---
 
     // F1: Jaw Opening
@@ -29,10 +36,6 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
     const tmjX = 175;
     const tmjY = 140;
 
-    // VISUAL FIX: User felt "Start Value" (Closed/Low F1) was "Too High".
-    // Previously: 25 deg (Up).
-    // New Range: 5 deg (Neutral/Slightly Up) -> -25 deg (Wide Open).
-    // This ensures the "Closed" state isn't jamming correctly into the skull.
     const jawAngle = lerp(5, -25, f1Param);
     const rad = (jawAngle * Math.PI) / 180;
 
@@ -55,25 +58,19 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
     const tRoot = [rootBaseX, 280];
 
     // 2. Tip Anchor (Attached to Lower Jaw)
-    // Base Tip: (100, 220) relative to unrotated jaw
     const baseTipX = lerp(100, 95, f2Param);
     const baseTipY = 220;
     const tTip = rotate(baseTipX, baseTipY);
 
     // 3. Hump (The Body)
-    // Interpolate relative to jaw floor
     const jawMid = rotate(130, 240);
 
     const humpXOffset = lerp(20, -20, f2Param);
     const humpYOffset = lerp(-10, -50, f2Param);
-    // F1 Effect: Open jaw flattens the tongue slightly relative to jaw
     const opennessOffset = f1Param * 10;
 
-    // Final Hump with CLAMPING
     const humpX = jawMid[0] + humpXOffset;
     const rawHumpY = jawMid[1] + humpYOffset + opennessOffset;
-
-    // Clamp to avoid palate clipping (Palate Y ~ 160)
     const humpY = Math.max(165, rawHumpY);
 
     // Exquisite Tongue Path
@@ -82,6 +79,45 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
         Q ${tRoot[0] - 10},${250} ${humpX},${humpY} 
         S ${tTip[0]},${tTip[1]} ${tTip[0]},${tTip[1]}
     `;
+
+    // --- Interaction Handlers ---
+    const handlePointerDown = (target: 'jaw' | 'tongue', e: React.PointerEvent) => {
+        if (!onFormantChange) return;
+        e.stopPropagation();
+        (e.target as SVGElement).setPointerCapture(e.pointerId);
+        setDragging(target);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!dragging || !svgRef.current || !onFormantChange) return;
+
+        const rect = svgRef.current.getBoundingClientRect();
+        // Get position in SVG viewBox coordinates (0-300 x, 0-400 y)
+        const x = ((e.clientX - rect.left) / rect.width) * 300;
+        const y = ((e.clientY - rect.top) / rect.height) * 400;
+
+        let newF1 = formants.f1;
+        let newF2 = formants.f2;
+
+        if (dragging === 'jaw') {
+            // Map Y position to F1: Higher Y (lower on screen) = larger F1 (open jaw)
+            // Y range roughly 180 (closed) to 280 (open) in viewBox
+            const f1T = invLerp(180, 300, y);
+            newF1 = lerp(250, 900, f1T);
+        } else if (dragging === 'tongue') {
+            // Map X position to F2: Lower X (left/front) = higher F2
+            // X range roughly 80 (front) to 180 (back) in viewBox
+            const f2T = invLerp(180, 80, x); // Inverted: left = high F2
+            newF2 = lerp(800, 2500, f2T);
+        }
+
+        onFormantChange(Math.round(newF1), Math.round(newF2));
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        (e.target as SVGElement).releasePointerCapture(e.pointerId);
+        setDragging(null);
+    };
 
     // --- 3. Render "Glass Anatomy" Style ---
     return (
@@ -93,7 +129,14 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
                 }}
             />
 
-            <svg viewBox="0 0 300 400" className="w-full h-full z-10 relative">
+            <svg 
+                ref={svgRef}
+                viewBox="0 0 300 400" 
+                className="w-full h-full z-10 relative"
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+            >
                 <defs>
                     <linearGradient id="boneGlass" x1="0" y1="0" x2="1" y2="1">
                         <stop offset="0%" stopColor="#fff" stopOpacity="0.1" />
@@ -133,8 +176,15 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
                     <path d="M 190,190 L 190,380" stroke="#f43f5e" strokeOpacity="0.2" strokeWidth="1" />
                 </g>
 
-                {/* --- Dynamic Jaw (Floating) --- */}
-                <g transform={`rotate(${jawAngle}, ${tmjX}, ${tmjY})`} style={{ transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}>
+                {/* --- Dynamic Jaw (Floating) - INTERACTIVE --- */}
+                <g 
+                    transform={`rotate(${jawAngle}, ${tmjX}, ${tmjY})`} 
+                    style={{ 
+                        transition: dragging === 'jaw' ? 'none' : 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        cursor: onFormantChange ? 'ns-resize' : 'default'
+                    }}
+                    onPointerDown={(e) => handlePointerDown('jaw', e)}
+                >
                     <path d="M 175,140 L 165,240 Q 150,260 100,260 L 90,260 L 90,225 L 175,140"
                         fill="url(#boneGlass)" stroke="#ffffff" strokeOpacity="0.1" />
 
@@ -143,10 +193,19 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
 
                     {/* Lower Lip */}
                     <path d="M 90,220 Q 75,215 85,245 L 100,250" stroke="#f43f5e" strokeOpacity="0.4" fill="url(#boneGlass)" />
+                    
+                    {/* Drag Handle Indicator */}
+                    {onFormantChange && (
+                        <circle cx="130" cy="250" r="8" fill="rgba(99, 102, 241, 0.3)" stroke="rgba(99, 102, 241, 0.6)" strokeWidth="1" className="animate-pulse" />
+                    )}
                 </g>
 
-                {/* --- TONGUE (Global Space) --- */}
-                <g filter="url(#blurGlow)">
+                {/* --- TONGUE (Global Space) - INTERACTIVE --- */}
+                <g 
+                    filter="url(#blurGlow)"
+                    style={{ cursor: onFormantChange ? 'ew-resize' : 'default' }}
+                    onPointerDown={(e) => handlePointerDown('tongue', e)}
+                >
                     <path
                         d={tonguePath}
                         fill="url(#tongueGlass)"
@@ -154,8 +213,12 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
                         strokeWidth="2"
                         strokeOpacity="0.9"
                         strokeLinecap="round"
-                        style={{ transition: 'd 0.1s linear' }}
+                        style={{ transition: dragging === 'tongue' ? 'none' : 'd 0.1s linear' }}
                     />
+                    {/* Drag Handle Indicator */}
+                    {onFormantChange && (
+                        <circle cx={humpX} cy={humpY} r="8" fill="rgba(56, 189, 248, 0.3)" stroke="rgba(56, 189, 248, 0.6)" strokeWidth="1" className="animate-pulse" />
+                    )}
                 </g>
 
                 {/* HUD Overlay */}
@@ -172,6 +235,11 @@ export const VocalTractViz: React.FC<Props> = ({ formants, pitch }) => {
                         <text x="0" y="0" fill="#38bdf8" fontWeight="bold" fontSize="11">F2</text>
                         <text x="20" y="0">{Math.round(formants.f2)} Hz</text>
                     </g>
+                    
+                    {/* Interactive Hint */}
+                    {onFormantChange && (
+                        <text x="150" y="395" textAnchor="middle" fill="#6366f1" fontSize="8">拖动下巴/舌头调整共振峰</text>
+                    )}
                 </g>
             </svg>
         </div>

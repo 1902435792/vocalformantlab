@@ -486,7 +486,11 @@ function App() {
                                         </div>
                                     </div>
                                     <div className="w-full h-full p-0 bg-slate-900/50">
-                                        <VocalTractViz formants={currentFormants} pitch={state.pitch} />
+                                        <VocalTractViz
+                                            formants={currentFormants}
+                                            pitch={state.pitch}
+                                            onFormantChange={handleChartInteraction}
+                                        />
                                     </div>
                                 </div>
 
