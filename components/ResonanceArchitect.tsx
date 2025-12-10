@@ -159,114 +159,6 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
           </div>
         </div>
 
-        {/* NEW: Physiology Section */}
-        <div className="border-t border-white/10 pt-4">
-          <label className="text-xs font-bold text-slate-400 uppercase mb-3 block flex items-center gap-2">
-            <Sliders size={14} /> 生理构造 (Physiology)
-          </label>
-          <div className="space-y-4">
-            {/* Tract Length */}
-            <div>
-              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                <span>声道长度 (VTL)</span>
-                <span className="font-mono text-indigo-300">{physics.tractLength.toFixed(1)} cm</span>
-              </div>
-              <input
-                type="range"
-                min={12}
-                max={22}
-                step={0.5}
-                value={physics.tractLength}
-                onChange={(e) => handlePhysicsChange('tractLength', Number(e.target.value))}
-                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-              />
-            </div>
-
-            {/* Fold Thickness */}
-            <div>
-              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                <span>声带厚度 (Thickness)</span>
-                <span className="font-mono text-indigo-300">{physics.foldThickness}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={physics.foldThickness}
-                onChange={(e) => handlePhysicsChange('foldThickness', Number(e.target.value))}
-                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-rose-500"
-              />
-            </div>
-
-            {/* Closed Quotient */}
-            <div>
-              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                <span>闭合系数 (CQ)</span>
-                <span className="font-mono text-indigo-300">{(physics.closedQuotient * 100).toFixed(0)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0.1}
-                max={0.9}
-                step={0.05}
-                value={physics.closedQuotient}
-                onChange={(e) => handlePhysicsChange('closedQuotient', Number(e.target.value))}
-                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* NEW: Resonance Section */}
-        <div className="border-t border-white/10 pt-4">
-          <div className="flex items-center justify-between mb-3">
-            <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
-              <Zap size={14} /> 音色共鸣 (Resonance)
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">歌手共振峰</span>
-              <button
-                onClick={() => setSingersFormant(!singersFormant)}
-                className={`w-8 h-4 rounded-full transition-colors relative ${singersFormant ? 'bg-indigo-500 shadow-lg shadow-indigo-500/50' : 'bg-slate-700/50'}`}
-              >
-                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${singersFormant ? 'left-4.5' : 'left-0.5'}`} />
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {/* Frequency Slider */}
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-slate-500 w-8">频率</span>
-              <input
-                type="range"
-                min={500}
-                max={5000}
-                step={50}
-                value={harmonicBoost.freq}
-                onChange={(e) => handleBoostChange('freq', Number(e.target.value))}
-                className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
-              />
-              <span className="text-[10px] font-mono text-amber-400 w-12 text-right">{harmonicBoost.freq}Hz</span>
-            </div>
-
-            {/* Gain Slider */}
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-slate-500 w-8">增益</span>
-              <input
-                type="range"
-                min={0}
-                max={24}
-                step={0.5}
-                value={harmonicBoost.gain}
-                onChange={(e) => handleBoostChange('gain', Number(e.target.value))}
-                className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-              />
-              <span className="text-[10px] font-mono text-emerald-400 w-12 text-right">+{harmonicBoost.gain}dB</span>
-            </div>
-          </div>
-        </div>
 
         {/* Warning Panel */}
         {result.warning && (
@@ -279,13 +171,57 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
 
       {/* 2. Visualization Panel (Center) */}
       <div className="lg:col-span-6 flex flex-col gap-6">
-        {/* Chart Container */}
-        <div className="glass-panel p-2 rounded-3xl shadow-xl flex-grow min-h-[400px] relative pointer-events-none">
+        {/* Chart Container - With Warning Glow */}
+        <div className={`glass-panel p-2 rounded-3xl shadow-xl flex-grow min-h-[400px] relative pointer-events-none transition-all duration-300 ${!result.isFeasible ? 'ring-2 ring-red-500/50 shadow-red-500/20' : ''}`}>
+
+          {/* Target IPA Label */}
           <div className="absolute top-4 right-4 z-10 bg-slate-900/80 px-3 py-1 rounded-lg text-xs font-mono text-slate-400 border border-white/10 backdrop-blur-sm">
             目标: {result.closestVowel.ipa}
           </div>
-          {/* We reuse VowelSpaceChart in read-only mode by passing a no-op handler */}
-          {/* We reuse VowelSpaceChart in read-only mode by passing a no-op handler */}
+
+          {/* Warning Overlay - When Not Feasible */}
+          {!result.isFeasible && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm rounded-3xl p-6 animate-in fade-in duration-300">
+              <div className="bg-red-500/20 p-4 rounded-full mb-4 animate-pulse">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-red-300 mb-2">超出生理极限</h3>
+              <p className="text-sm text-slate-400 text-center max-w-md mb-4">
+                {result.warning}
+              </p>
+
+              {/* Strategy Suggestions */}
+              <div className="bg-slate-900/50 rounded-xl p-4 border border-white/10 w-full max-w-sm">
+                <div className="text-xs text-slate-500 uppercase font-bold mb-2">建议切换到：</div>
+                <div className="space-y-1 text-sm">
+                  {pitch > 400 && strategy !== ResonanceStrategy.DEEP_COVER && (
+                    <div className="flex items-center gap-2 text-indigo-300">
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full" />
+                      深度覆盖 (Deep Cover) - 高音更舒适
+                    </div>
+                  )}
+                  {pitch > 350 && strategy !== ResonanceStrategy.SUPER_HEAD && (
+                    <div className="flex items-center gap-2 text-cyan-300">
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full" />
+                      超高头声 (Super Head) - 极高音共鸣
+                    </div>
+                  )}
+                  {pitch < 300 && strategy !== ResonanceStrategy.OPEN_CHEST && (
+                    <div className="flex items-center gap-2 text-emerald-300">
+                      <span className="w-2 h-2 bg-emerald-400 rounded-full" />
+                      开放胸声 (Open Chest) - 低音更自然
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-amber-300 mt-2 pt-2 border-t border-white/10">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                    或降低音高 (Pitch) 尝试
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VowelSpaceChart */}
           {(!isNaN(vizFormants.f1) && !isNaN(vizFormants.f2)) ? (
             <VowelSpaceChart
               currentFormants={vizFormants}
@@ -325,6 +261,94 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
             <span>C4 (261)</span>
             <span>C5 (523)</span>
             <span>C6 (1046)</span>
+          </div>
+        </div>
+
+        {/* Physiology & Resonance Controls - Two Column Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Physiology Panel */}
+          <div className="glass-panel p-4 rounded-2xl">
+            <label className="text-xs font-bold text-slate-400 uppercase mb-3 block flex items-center gap-2">
+              <Sliders size={14} /> 生理构造 (Physiology)
+            </label>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                  <span>声道长度</span>
+                  <span className="font-mono text-indigo-300">{physics.tractLength.toFixed(1)} cm</span>
+                </div>
+                <input
+                  type="range" min={12} max={22} step={0.5}
+                  value={physics.tractLength}
+                  onChange={(e) => handlePhysicsChange('tractLength', Number(e.target.value))}
+                  className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                  <span>声带厚度</span>
+                  <span className="font-mono text-rose-300">{physics.foldThickness}%</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} step={1}
+                  value={physics.foldThickness}
+                  onChange={(e) => handlePhysicsChange('foldThickness', Number(e.target.value))}
+                  className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                  <span>闭合系数</span>
+                  <span className="font-mono text-amber-300">{(physics.closedQuotient * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range" min={0.1} max={0.9} step={0.05}
+                  value={physics.closedQuotient}
+                  onChange={(e) => handlePhysicsChange('closedQuotient', Number(e.target.value))}
+                  className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Resonance Panel */}
+          <div className="glass-panel p-4 rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
+                <Zap size={14} /> 音色共鸣 (Resonance)
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-500">歌手峰</span>
+                <button
+                  onClick={() => setSingersFormant(!singersFormant)}
+                  className={`w-8 h-4 rounded-full transition-colors relative ${singersFormant ? 'bg-indigo-500' : 'bg-slate-700/50'}`}
+                >
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${singersFormant ? 'left-4.5' : 'left-0.5'}`} />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-500 w-8">频率</span>
+                <input
+                  type="range" min={500} max={5000} step={50}
+                  value={harmonicBoost.freq}
+                  onChange={(e) => handleBoostChange('freq', Number(e.target.value))}
+                  className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+                <span className="text-[10px] font-mono text-amber-400 w-12 text-right">{harmonicBoost.freq}Hz</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-500 w-8">增益</span>
+                <input
+                  type="range" min={0} max={24} step={0.5}
+                  value={harmonicBoost.gain}
+                  onChange={(e) => handleBoostChange('gain', Number(e.target.value))}
+                  className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                />
+                <span className="text-[10px] font-mono text-emerald-400 w-12 text-right">+{harmonicBoost.gain}dB</span>
+              </div>
+            </div>
           </div>
         </div>
 
