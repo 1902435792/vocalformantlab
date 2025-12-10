@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Gender, ResonanceStrategy, FormantData, VowelType } from '../types';
+import { Gender, ResonanceStrategy, FormantData, VowelType, VocalPhysics, HarmonicBoost } from '../types';
 import { calculateResonanceStrategy } from '../services/vraService';
 import { VowelSpaceChart } from './VowelSpaceChart';
-import { Music, AlertTriangle, Info, Play, Square } from 'lucide-react';
+import { Music, AlertTriangle, Info, Play, Square, Sliders, Zap } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
 interface Props {
@@ -14,6 +14,22 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
   const [pitch, setPitch] = useState(392); // G4 default
   const [strategy, setStrategy] = useState<ResonanceStrategy>(ResonanceStrategy.OPEN_CHEST);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // NEW: Physiology state
+  const [physics, setPhysics] = useState<VocalPhysics>({
+    tractLength: 17.5,
+    foldThickness: 50,
+    closedQuotient: 0.5
+  });
+
+  // NEW: Resonance state
+  const [singersFormant, setSingersFormant] = useState(false);
+  const [harmonicBoost, setHarmonicBoost] = useState<HarmonicBoost>({
+    active: true,
+    freq: 2000,
+    gain: 0,
+    q: 2
+  });
 
   const result = calculateResonanceStrategy(pitch, strategy, gender);
 
@@ -33,14 +49,15 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
           pitch,
           vizFormants,
           0.5,
-          false, // No singer's formant default
-          { active: false, freq: 0, gain: 0, q: 0 } // No boost default
+          singersFormant,
+          harmonicBoost,
+          physics
         );
       } catch (e) {
         console.error("Audio update failed", e);
       }
     }
-  }, [pitch, strategy, result, isPlaying]);
+  }, [pitch, strategy, result, isPlaying, singersFormant, harmonicBoost, physics]);
 
   const togglePlay = () => {
     try {
@@ -51,8 +68,8 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
           pitch,
           vizFormants,
           0.5,
-          false,
-          { active: false, freq: 0, gain: 0, q: 0 }
+          singersFormant,
+          harmonicBoost
         );
       }
       setIsPlaying(!isPlaying);
@@ -67,6 +84,14 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
     const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     const steps = Math.round(12 * Math.log2(freq / 440) + 57);
     return notes[steps % 12] + Math.floor(steps / 12);
+  };
+
+  const handlePhysicsChange = (field: keyof VocalPhysics, value: number) => {
+    setPhysics(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBoostChange = (field: 'freq' | 'gain', value: number) => {
+    setHarmonicBoost(prev => ({ ...prev, [field]: value, active: true }));
   };
 
   return (
@@ -130,6 +155,115 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
               <div className="font-bold text-sm">6. 超高头声 (Super Head)</div>
               <div className="text-[10px] opacity-70">F2≈H3. 极高音头声共鸣。</div>
             </button>
+          </div>
+        </div>
+
+        {/* NEW: Physiology Section */}
+        <div className="border-t border-white/10 pt-4">
+          <label className="text-xs font-bold text-slate-400 uppercase mb-3 block flex items-center gap-2">
+            <Sliders size={14} /> 生理构造 (Physiology)
+          </label>
+          <div className="space-y-4">
+            {/* Tract Length */}
+            <div>
+              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>声道长度 (VTL)</span>
+                <span className="font-mono text-indigo-300">{physics.tractLength.toFixed(1)} cm</span>
+              </div>
+              <input
+                type="range"
+                min={12}
+                max={22}
+                step={0.5}
+                value={physics.tractLength}
+                onChange={(e) => handlePhysicsChange('tractLength', Number(e.target.value))}
+                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
+            </div>
+
+            {/* Fold Thickness */}
+            <div>
+              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>声带厚度 (Thickness)</span>
+                <span className="font-mono text-indigo-300">{physics.foldThickness}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={physics.foldThickness}
+                onChange={(e) => handlePhysicsChange('foldThickness', Number(e.target.value))}
+                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-rose-500"
+              />
+            </div>
+
+            {/* Closed Quotient */}
+            <div>
+              <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>闭合系数 (CQ)</span>
+                <span className="font-mono text-indigo-300">{(physics.closedQuotient * 100).toFixed(0)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0.1}
+                max={0.9}
+                step={0.05}
+                value={physics.closedQuotient}
+                onChange={(e) => handlePhysicsChange('closedQuotient', Number(e.target.value))}
+                className="w-full h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* NEW: Resonance Section */}
+        <div className="border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
+              <Zap size={14} /> 音色共鸣 (Resonance)
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">歌手共振峰</span>
+              <button
+                onClick={() => setSingersFormant(!singersFormant)}
+                className={`w-8 h-4 rounded-full transition-colors relative ${singersFormant ? 'bg-indigo-500 shadow-lg shadow-indigo-500/50' : 'bg-slate-700/50'}`}
+              >
+                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${singersFormant ? 'left-4.5' : 'left-0.5'}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* Frequency Slider */}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-slate-500 w-8">频率</span>
+              <input
+                type="range"
+                min={500}
+                max={5000}
+                step={50}
+                value={harmonicBoost.freq}
+                onChange={(e) => handleBoostChange('freq', Number(e.target.value))}
+                className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+              <span className="text-[10px] font-mono text-amber-400 w-12 text-right">{harmonicBoost.freq}Hz</span>
+            </div>
+
+            {/* Gain Slider */}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-slate-500 w-8">增益</span>
+              <input
+                type="range"
+                min={0}
+                max={24}
+                step={0.5}
+                value={harmonicBoost.gain}
+                onChange={(e) => handleBoostChange('gain', Number(e.target.value))}
+                className="flex-grow h-1 bg-slate-700/50 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <span className="text-[10px] font-mono text-emerald-400 w-12 text-right">+{harmonicBoost.gain}dB</span>
+            </div>
           </div>
         </div>
 
