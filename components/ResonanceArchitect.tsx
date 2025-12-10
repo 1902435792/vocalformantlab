@@ -69,7 +69,8 @@ export const ResonanceArchitect: React.FC<Props> = ({ gender }) => {
           vizFormants,
           0.5,
           singersFormant,
-          harmonicBoost
+          harmonicBoost,
+          physics
         );
       }
       setIsPlaying(!isPlaying);
