@@ -25,3 +25,31 @@ View your app in AI Studio: https://ai.studio/apps/drive/1RnYzVKkcWZ8FgEx9Npg-97
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## 使用说明 (Chinese Guide)
+
+如果您（或您的朋友）想运行此项目，请按照以下步骤操作：
+
+1.  **下载代码**
+    ```bash
+    git clone https://github.com/1902435792/vocalformantlab.git
+    cd vocalformantlab
+    ```
+
+2.  **安装依赖**
+    需要电脑上已安装 Node.js (推荐 v18+)。
+    ```bash
+    npm install
+    ```
+
+3.  **配置环境**
+    在项目根目录下创建一个名为 `.env.local` 的文件，填入您的 Gemini API Key：
+    ```text
+    GEMINI_API_KEY=从Google获取的API_KEY
+    ```
+
+4.  **运行项目**
+    ```bash
+    npm run dev
+    ```
+    运行后，打开终端显示的本地地址 (通常是 `http://localhost:3000`) 即可使用。
