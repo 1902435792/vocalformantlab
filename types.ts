@@ -80,6 +80,8 @@ export enum ResonanceStrategy {
   METAL_BELT = 'METAL_BELT',   // F1 ≈ H2, F2 ≈ H3
   TWANG_MIX = 'TWANG_MIX',     // F1 ≈ H1, F2 ≈ H3 (New)
   SUPER_HEAD = 'SUPER_HEAD',   // F1 ≈ H1, F2 ≈ H3 (Modified High Pitch)
+  SOB_CRY = 'SOB_CRY',         // Low Larynx, Dark (New)
+  PHARYNGEAL = 'PHARYNGEAL',   // High Compression, Squeezed (New)
 }
 
 export interface VraResult {
@@ -89,6 +91,12 @@ export interface VraResult {
   targetF1: number;
   targetF2: number | null; // Null if strategy doesn't enforce F2
   targetF3?: number | null; // Null if strategy doesn't enforce F3
+
+  // MACRO PARAMS (Physics Overrides)
+  physics?: Partial<VocalPhysics>;
+  harmonicBoost?: HarmonicBoost;
+  singersFormant?: boolean;
+
   isFeasible: boolean;
   warning?: string;
   closestVowel: {
