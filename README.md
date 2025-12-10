@@ -10,7 +10,14 @@ View your app in AI Studio: https://ai.studio/apps/drive/1RnYzVKkcWZ8FgEx9Npg-97
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:**
+- Node.js (v18.0.0 or higher recommended, tested on v24.11.1)
+- npm (comes with Node.js)
+
+## Tech Stack
+- [React](https://react.dev/) 19
+- [Vite](https://vitejs.dev/) 6
+- [TypeScript](https://www.typescriptlang.org/)
 
 
 1. Install dependencies:
