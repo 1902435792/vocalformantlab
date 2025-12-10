@@ -1,0 +1,5 @@
+{
+  "name": "Copy of VocalFormantLab",
+  "description": "A specialized acoustic simulation tool for demonstrating vocal tract formants (F1, F2, F3) across different vowels and pitches. Includes real-time audio synthesis and AI-powered acoustic analysis.",
+  "requestFramePermissions": []
+}
